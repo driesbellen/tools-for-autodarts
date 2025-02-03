@@ -1,6 +1,7 @@
 import { AutodartsToolsConfig } from "@/utils/storage";
 import { AutodartsToolsSoundsConfig } from "@/utils/soundsStorage";
 import { playSound } from "@/utils/playSound";
+import { isiOS } from "@/utils/helpers";
 
 export async function soundsStart() {
   const config = await AutodartsToolsConfig.getValue();
@@ -8,6 +9,10 @@ export async function soundsStart() {
   if (!config.sounds.enabled) return;
 
   if (soundConfig.gameOn?.data || soundConfig.gameOn?.info) {
+    const audio = new Audio(soundConfig.gameOn.data || soundConfig.gameOn.info);
+    if (isiOS()) {
+      audio.autoplay = true;
+    }
     await playSound("gameOn", 2);
   }
 }

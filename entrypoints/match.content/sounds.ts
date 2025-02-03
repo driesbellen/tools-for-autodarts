@@ -3,7 +3,7 @@ import { AutodartsToolsCallerConfig } from "@/utils/callerStorage";
 import { AutodartsToolsSoundsConfig } from "@/utils/soundsStorage";
 
 import { playPointsSound, playSound } from "@/utils/playSound";
-import { isCricket, isValidGameMode } from "@/utils/helpers";
+import { isCricket, isValidGameMode, isiOS } from "@/utils/helpers";
 
 export async function sounds() {
   const isCallerEnabled = (await AutodartsToolsConfig.getValue()).caller.enabled && isValidGameMode();
@@ -119,4 +119,18 @@ export async function sounds() {
       }
     }
   }, isBot ? 500 : 0);
+}
+
+export async function playSound(configKey: string, slot: number = 1, arrIndex?: number) {
+  let soundConfig = (await AutodartsToolsSoundsConfig.getValue())[configKey];
+  if (typeof arrIndex === "number") soundConfig = soundConfig[arrIndex];
+  const isSoundsEnabled = (await AutodartsToolsConfig.getValue()).sounds.enabled;
+  const fileName = soundConfig.info;
+  if (!isSoundsEnabled || !fileName) return;
+  const fileData = soundConfig.data;
+  const audio = new Audio(fileData || fileName);
+  if (isiOS()) {
+    audio.autoplay = true;
+  }
+  audio.play();
 }

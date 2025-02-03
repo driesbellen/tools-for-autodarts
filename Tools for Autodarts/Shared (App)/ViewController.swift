@@ -1,10 +1,3 @@
-//
-//  ViewController.swift
-//  Shared (App)
-//
-//  Created by Tobias Thiele on 21.03.24.
-//
-
 import WebKit
 
 #if os(iOS)
@@ -29,6 +22,7 @@ class ViewController: PlatformViewController, WKNavigationDelegate, WKScriptMess
 
 #if os(iOS)
         self.webView.scrollView.isScrollEnabled = false
+        self.webView.configuration.mediaTypesRequiringUserActionForPlayback = []
 #endif
 
         self.webView.configuration.userContentController.add(self, name: "controller")

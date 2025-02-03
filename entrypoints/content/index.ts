@@ -16,6 +16,9 @@ export default defineContentScript({
     } else {
       if (isiOS()) {
         document.querySelector("body")!.style!.minHeight = "calc(100vh + 1px)";
+        await AutodartsToolsSoundAutoplayStatus.setValue(true);
+      } else {
+        await AutodartsToolsSoundAutoplayStatus.setValue(false);
       }
       await waitForElement("#root > div:nth-of-type(1)", 15000);
 
@@ -35,7 +38,6 @@ export default defineContentScript({
         }
       }, 2000);
 
-      await AutodartsToolsSoundAutoplayStatus.setValue(false);
       await waitForElement("#root > div > div:nth-of-type(2)", 15000);
       const ui = await createShadowRootUi(ctx, {
         name: "autodarts-tools-wxt",

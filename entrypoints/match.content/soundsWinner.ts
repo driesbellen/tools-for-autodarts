@@ -3,6 +3,7 @@ import { AutodartsToolsCallerConfig } from "@/utils/callerStorage";
 import { AutodartsToolsSoundsConfig } from "@/utils/soundsStorage";
 import { playPointsSound, playSound } from "@/utils/playSound";
 import { getWinnerPlayerCard } from "@/utils/getElements";
+import { isiOS } from "@/utils/helpers";
 
 export async function soundsWinner() {
   try {
@@ -27,7 +28,11 @@ export async function soundsWinner() {
         setTimeout(() => {
           const winnerSoundIndex = soundsConfig.winner.findIndex(winner => winner.name.toLowerCase() === winnerPlayerName?.toLowerCase());
           const soundIndex = winnerSoundIndex && soundsConfig.winner[winnerSoundIndex]?.info ? winnerSoundIndex : 0;
-          playSound("winner", 2, soundIndex);
+          const audio = new Audio(soundsConfig.winner[soundIndex].data || soundsConfig.winner[soundIndex].info);
+          if (isiOS()) {
+            audio.autoplay = true;
+          }
+          audio.play();
         }, 1000);
       }
     };
