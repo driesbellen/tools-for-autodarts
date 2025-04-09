@@ -29,6 +29,7 @@ export default defineContentScript({
       if (url.endsWith("/tournaments")) {
         console.log("Autodarts Tools: Tournaments Ready");
         if (true) { // TODO: Add local tournaments config
+          if (document.querySelector("#autodarts-tools-local-tournaments-button") || document.querySelector("#autodarts-tools-local-tournaments")) return;
           await initLocalTournamentsButton(ctx).catch(console.error);
           await initLocalTournaments(ctx).catch(console.error);
         }

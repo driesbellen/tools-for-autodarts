@@ -17,8 +17,9 @@ export default defineContentScript({
       console.log("WebSocket capture script injected successfully");
 
       // Listen for incoming WebSocket messages
-      ctx.addEventListener(window, "websocket-incoming", (event: CustomEvent) => {
-        const { data } = event.detail;
+      ctx.addEventListener(window, "websocket-incoming", (event: Event) => {
+        const customEvent = event as CustomEvent;
+        const { data } = customEvent.detail;
 
         // Only process string data that can be parsed as JSON
         if (typeof data === "string") {
@@ -34,8 +35,9 @@ export default defineContentScript({
       });
 
       // Listen for outgoing WebSocket messages
-      ctx.addEventListener(window, "websocket-outgoing", (event: CustomEvent) => {
-        const { data } = event.detail;
+      ctx.addEventListener(window, "websocket-outgoing", (event: Event) => {
+        const customEvent = event as CustomEvent;
+        const { data } = customEvent.detail;
 
         // Only process string data that can be parsed as JSON
         if (typeof data === "string") {

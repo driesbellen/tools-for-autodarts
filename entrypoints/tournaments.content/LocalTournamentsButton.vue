@@ -1,11 +1,14 @@
 <template>
-  <div class="text-base">
+  <div
+    v-if="localTournamentsConfig"
+    class="text-base"
+  >
     <AppButton
       @click="toggleLocalTournaments"
       class="font-normal"
     >
       <Trophy class="mr-2 size-4" />
-      Local Tournaments
+      {{ localTournamentsConfig.show ? "Public" : "Local" }} Tournaments
     </AppButton>
   </div>
 </template>

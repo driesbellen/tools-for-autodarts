@@ -1,5 +1,6 @@
 export interface ILocalTournaments {
   show: boolean;
+  tournamentData?: any; // Bracketry tournament data
 }
 
 export const defaultLocalTournamentsData: ILocalTournaments = {
