@@ -9,12 +9,12 @@
           <h3 class="mb-1 font-bold uppercase">
             Webhooks
           </h3>
-          <p class="max-w-[18rem] text-sm text-white/70">
+          <p class="w-2/3 text-sm text-white/70">
             Send game information to an external endpoint. Choose whether you want to receive match details
             or each individual throw.
           </p>
         </div>
-        <div class="flex">
+        <div class="relative flex">
           <div @click="$emit('toggle', 'webhooks')" class="absolute inset-y-0 left-12 right-0 cursor-pointer" />
           <AppToggle
             @update:model-value="toggleFeature"
@@ -66,7 +66,9 @@
 <script setup lang="ts">
 import AppInput from "../AppInput.vue";
 import AppToggle from "../AppToggle.vue";
+
 import type { IConfig } from "@/utils/storage";
+
 import { AutodartsToolsConfig } from "@/utils/storage";
 
 type PayloadKey = keyof IConfig["webhooks"]["payloadTypes"];
@@ -115,4 +117,3 @@ watch(config, async (_, oldValue) => {
   console.log("Webhooks setting changed");
 }, { deep: true });
 </script>
-

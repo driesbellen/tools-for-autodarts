@@ -490,6 +490,9 @@ You can specify the URL where the webhooks containing autodarts data should be s
 There are two different payloads that can be sent:
 - "Each Dart" will send a webhook for each dart thrown. It contains only data about the thrown dart (much less data transfer). A sample payload would look like this:
 
+<details>
+<summary>Click to expand "Each Dart" payload example</summary>
+
 ```json
 {
   "event": "throw",
@@ -533,7 +536,13 @@ There are two different payloads that can be sent:
 }
 ```
 
+</details>
+
 - "All Game Data" will send a complete match_state payload which includes many data like throws, legs, sets, results, players, boards, corrections and more. A sample payload would look like this:
+
+<details>
+<summary>Click to expand "All Game Data" payload example</summary>
+
 ```json
 {
     "event": "match_state",
@@ -968,6 +977,9 @@ There are two different payloads that can be sent:
     }
 }
 ```
+
+</details>
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request or create an issue if you have ideas for improvements or have found a bug.

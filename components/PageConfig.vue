@@ -236,9 +236,9 @@
           <div
             v-if="activeTab === 4 && !showDangerZone"
             :key="reloadKey"
-            class="grid grid-cols-1 gap-5 lg:grid-cols-2"
+            class="grid grid-cols-1 gap-5"
           >
-            <Webhooks @toggle="openSettingsModal('webhooks')" @setting-change="updateConfig" class="feature-card" data-feature-index="30" />
+            <Webhooks @setting-change="updateConfig" class="feature-card" data-feature-index="30" />
           </div>
         </template>
       </div>
@@ -356,7 +356,7 @@ const featureGroups = [
     id: "webhooks",
     tab: 4,
     features: [
-      { id: "webhooks", title: "Webhooks Settings", component: Webhooks, hasSettings: true },
+      { id: "webhooks", title: "Webhooks Settings", component: Webhooks, hasSettings: false },
     ],
     settingIds: [ "webhooks" ],
   },
