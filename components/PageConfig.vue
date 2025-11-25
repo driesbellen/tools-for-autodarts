@@ -232,6 +232,14 @@
             <SoundFx @toggle="openSettingsModal('sound-fx')" @setting-change="updateConfig" class="feature-card" data-feature-index="28" />
             <Wled @toggle="openSettingsModal('wled-fx')" @setting-change="updateConfig" class="feature-card" data-feature-index="29" />
           </div>
+
+          <div
+            v-if="activeTab === 4 && !showDangerZone"
+            :key="reloadKey"
+            class="grid grid-cols-1 gap-5 lg:grid-cols-2"
+          >
+            <Webhooks @toggle="openSettingsModal('webhooks')" @setting-change="updateConfig" class="feature-card" data-feature-index="30" />
+          </div>
         </template>
       </div>
     </div>
@@ -268,6 +276,7 @@ import Zoom from "./Settings/Zoom.vue";
 import QuickCorrection from "./Settings/QuickCorrection.vue";
 import EnhancedScoringDisplay from "./Settings/EnhancedScoringDisplay.vue";
 import InstantReplay from "./Settings/InstantReplay.vue";
+import Webhooks from "./Settings/Webhooks.vue";
 
 import type { IConfig, ISound } from "@/utils/storage";
 
@@ -343,10 +352,18 @@ const featureGroups = [
     ],
     settingIds: [ "animations", "caller", "sound-fx", "wled-fx" ],
   },
+  {
+    id: "webhooks",
+    tab: 4,
+    features: [
+      { id: "webhooks", title: "Webhooks Settings", component: Webhooks, hasSettings: true },
+    ],
+    settingIds: [ "webhooks" ],
+  },
 ];
 
 // Tabs component data
-const tabs = ref([ "Lobbies", "Matches", "Boards", "Sounds & Animations" ]);
+const tabs = ref([ "Lobbies", "Matches", "Boards", "Sounds & Animations", "Webhooks" ]);
 const activeSettings = useStorage("adt:active-settings", null);
 const activeTab = useStorage("adt:active-tab", 0);
 const showSettingsModal = ref(false);

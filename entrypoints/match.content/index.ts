@@ -14,6 +14,7 @@ import { largerPlayerNames } from "./larger-player-names";
 import { winnerAnimation, winnerAnimationOnRemove } from "./winner-animation";
 import { soundFx, soundFxOnRemove } from "./sound-fx";
 import { wledFx, wledFxOnRemove } from "./wled";
+import { initWebhooks, removeWebhooks } from "./webhooks";
 import { caller, callerOnRemove } from "./caller";
 import Zoom from "./Zoom.vue";
 import Animations from "./Animations.vue";
@@ -217,6 +218,8 @@ async function initMatch(ctx, url: string, matchId?: string) {
   if (config.wledFx.enabled) {
     await initScript(wledFx, url).catch(console.error);
   }
+
+  await initWebhooks().catch(console.error);
 }
 
 function clearMatch(fromBullOff: boolean = false) {
@@ -249,6 +252,7 @@ function clearMatch(fromBullOff: boolean = false) {
   discordStreamOnRemove();
   automaticNextLegOnRemove();
   enhancedScoringDisplayOnRemove();
+  removeWebhooks();
   matchInitialized = false;
 }
 

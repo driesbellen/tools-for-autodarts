@@ -156,6 +156,15 @@ async function migrateConfig(currentConfigVersion: number) {
           };
         }
         break;
+      case 18:
+        // Migration from version 18 to version 19
+        config.version = 19;
+        if (!config.webhooks) {
+          config.webhooks = {
+            ...defaultConfig.webhooks,
+          };
+        }
+        break;
     }
 
     await AutodartsToolsConfig.setValue(config);

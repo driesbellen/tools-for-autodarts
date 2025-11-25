@@ -482,6 +482,492 @@ yarn build:firefox
 yarn zip
 ```
 
+## 🔔 External Webhooks Feature
+
+The external webhooks feature adds the ability to send autodarts match's data to an external server. You can receive this data on your own server, parse it your own way, build your own statistics or whatever you want to do. 
+You can specify the URL where the webhooks containing autodarts data should be send to. Optional you can specify a Bearer Token which will be added as Authentication-Header to the outgoing request.
+
+There are two different payloads that can be sent:
+- "Each Dart" will send a webhook for each dart thrown. It contains only data about the thrown dart (much less data transfer). A sample payload would look like this:
+
+```json
+{
+  "event": "throw",
+  "timestamp": "2025-11-18T20:42:21.627Z",
+  "source": "Tools for Autodarts",
+  "matchId": "019a9891-e852-77ce-8b5b-xxx",
+  "data": {
+    "matchId": "019a9891-e852-77ce-xxx",
+    "turnId": "019a98b4-35c3-76f2-xxx",
+    "playerId": "019a9892-3804-7d63-9841-xxx",
+    "playerName": "toenizz",
+    "leg": 2,
+    "set": 1,
+    "round": 15,
+    "score": 77,
+    "throw": {
+      "coords": {
+        "x": -0.57483481619382826,
+        "y": 0.070616989366787536
+      },
+      "createdAt": "2025-11-18T20:42:21.577897334Z",
+      "detection": {
+        "CalibrationID": "019a9874-30b7-7f08-883c-xxx",
+        "ClientVersion": "0.26.15",
+        "ConfigID": "019591ec-209c-7e0d-8400-xxx",
+        "DistortionID": null,
+        "ID": "00000000-0000-0000-0000-000000000000"
+      },
+      "entry": "detected",
+      "id": "019a98b4-4206-7786-9fbf-xxx",
+      "marks": 0,
+      "segment": {
+        "bed": "Triple",
+        "multiplier": 3,
+        "name": "T11",
+        "number": 11
+      },
+      "throw": 0
+    }
+  }
+}
+```
+
+- "All Game Data" will send a complete match_state payload which includes many data like throws, legs, sets, results, players, boards, corrections and more. A sample payload would look like this:
+```json
+{
+    "event": "match_state",
+    "timestamp": "2025-11-20T07:32:08.572Z",
+    "source": "Tools for Autodarts",
+    "matchId": "019aa02b-023c-7241-b967-xxx",
+    "variant": "X01",
+    "data": {
+        "match": {
+            "chalkboards": [
+                {
+                    "rows": [
+                        {
+                            "isPointsStruck": false,
+                            "isScoreStruck": true,
+                            "points": 0,
+                            "round": 0,
+                            "score": 121
+                        },
+                        {
+                            "isPointsStruck": true,
+                            "isScoreStruck": true,
+                            "points": 20,
+                            "round": 1,
+                            "score": 101
+                        },
+                        {
+                            "isPointsStruck": true,
+                            "isScoreStruck": false,
+                            "points": 88,
+                            "round": 2,
+                            "score": 13
+                        }
+                    ]
+                },
+                {
+                    "rows": [
+                        {
+                            "isPointsStruck": false,
+                            "isScoreStruck": true,
+                            "points": 0,
+                            "round": 0,
+                            "score": 121
+                        },
+                        {
+                            "isPointsStruck": true,
+                            "isScoreStruck": false,
+                            "points": 100,
+                            "round": 1,
+                            "score": 21
+                        }
+                    ]
+                }
+            ],
+            "createdAt": "2025-11-20T07:29:52.736420693Z",
+            "finished": true,
+            "gameFinished": true,
+            "gameScores": [
+                13,
+                0
+            ],
+            "gameWinner": 1,
+            "hasReferee": false,
+            "host": {
+                "avatarUrl": "https://gravatar.com/avatar/a3e06b41b2eeb1572367b0ee0de99689",
+                "average": 35.280793319415451,
+                "averageUntil170": 44.658585858585859,
+                "checkoutRate": 0.089219330855018583,
+                "country": "de",
+                "first9Average": 45.8936170212766,
+                "id": "a38b3a08-002a-4551-9ff9-xxx",
+                "legsPlayed": 508,
+                "name": "aleex",
+                "total180s": 2,
+                "tournament180s": 0,
+                "tournamentAverage": 32.612068965517238,
+                "tournamentAverageUntil170": 41.652173913043477,
+                "tournamentWins": 0,
+                "tournamentsPlayed": 1,
+                "userSettings": {
+                    "callCheckouts": false,
+                    "callScores": false,
+                    "caller": null,
+                    "callerEmotion": "floor",
+                    "callerLanguage": "english",
+                    "callerVolume": 100,
+                    "countEachThrow": true,
+                    "language": "en",
+                    "showAnimations": true,
+                    "showChalkboard": true,
+                    "showCheckoutGuide": true,
+                    "showDiscordProfile": true,
+                    "showSeasonalEffects": true,
+                    "showViewers": true
+                }
+            },
+            "id": "019aa02b-023c-7241-b967-xxx",
+            "leg": 1,
+            "legs": 1,
+            "player": 1,
+            "players": [
+                {
+                    "avatarUrl": null,
+                    "cpuPPR": 30,
+                    "host": {
+                        "avatarUrl": "https://gravatar.com/avatar/a3e06b41b2eeb1572367b0ee0de99689",
+                        "average": 35.280793319415451,
+                        "averageUntil170": 44.658585858585859,
+                        "checkoutRate": 0.089219330855018583,
+                        "country": "de",
+                        "first9Average": 45.8936170212766,
+                        "id": "a38b3a08-002a-4551-9ff9-xxx",
+                        "legsPlayed": 508,
+                        "name": "aleex",
+                        "total180s": 2,
+                        "tournament180s": 0,
+                        "tournamentAverage": 32.612068965517238,
+                        "tournamentAverageUntil170": 41.652173913043477,
+                        "tournamentWins": 0,
+                        "tournamentsPlayed": 1,
+                        "userSettings": {
+                            "callCheckouts": false,
+                            "callScores": false,
+                            "caller": null,
+                            "callerEmotion": "floor",
+                            "callerLanguage": "english",
+                            "callerVolume": 100,
+                            "countEachThrow": true,
+                            "language": "en",
+                            "showAnimations": true,
+                            "showChalkboard": true,
+                            "showCheckoutGuide": true,
+                            "showDiscordProfile": true,
+                            "showSeasonalEffects": true,
+                            "showViewers": true
+                        }
+                    },
+                    "hostId": "a38b3a08-002a-4551-xxx",
+                    "id": "019aa02b-6de1-7787-a014-xxx",
+                    "index": 1,
+                    "isPending": false,
+                    "name": "Bot Level 2",
+                    "userId": null
+                },
+                {
+                    "avatarUrl": "https://gravatar.com/avatar/a3e06b41b2eeb1572367b0ee0de99689",
+                    "boardId": "3f562905-7443-430f-866d-xxx",
+                    "boardName": "Kinderzimmer",
+                    "boardVirtualNumberRing": true,
+                    "cpuPPR": null,
+                    "host": {
+                        "avatarUrl": "https://gravatar.com/avatar/a3e06b41b2eeb1572367b0ee0de99689",
+                        "average": 35.280793319415451,
+                        "averageUntil170": 44.658585858585859,
+                        "checkoutRate": 0.089219330855018583,
+                        "country": "de",
+                        "first9Average": 45.8936170212766,
+                        "id": "a38b3a08-002a-4551-9ff9-xxx",
+                        "legsPlayed": 508,
+                        "name": "aleex",
+                        "total180s": 2,
+                        "tournament180s": 0,
+                        "tournamentAverage": 32.612068965517238,
+                        "tournamentAverageUntil170": 41.652173913043477,
+                        "tournamentWins": 0,
+                        "tournamentsPlayed": 1,
+                        "userSettings": {
+                            "callCheckouts": false,
+                            "callScores": false,
+                            "caller": null,
+                            "callerEmotion": "floor",
+                            "callerLanguage": "english",
+                            "callerVolume": 100,
+                            "countEachThrow": true,
+                            "language": "en",
+                            "showAnimations": true,
+                            "showChalkboard": true,
+                            "showCheckoutGuide": true,
+                            "showDiscordProfile": true,
+                            "showSeasonalEffects": true,
+                            "showViewers": true
+                        }
+                    },
+                    "hostId": "a38b3a08-002a-4551-9ff9-xxx",
+                    "id": "019aa02b-02be-7156-994f-xxx",
+                    "index": 0,
+                    "isPending": false,
+                    "name": "aleex",
+                    "user": {
+                        "avatarUrl": "https://gravatar.com/avatar/a3e06b41b2eeb1572367b0ee0de99689",
+                        "average": 35.280793319415451,
+                        "averageUntil170": 44.658585858585859,
+                        "checkoutRate": 0.089219330855018583,
+                        "country": "de",
+                        "first9Average": 45.8936170212766,
+                        "id": "a38b3a08-002a-4551-9ff9-xxx",
+                        "legsPlayed": 508,
+                        "name": "aleex",
+                        "total180s": 2,
+                        "tournament180s": 0,
+                        "tournamentAverage": 32.612068965517238,
+                        "tournamentAverageUntil170": 41.652173913043477,
+                        "tournamentWins": 0,
+                        "tournamentsPlayed": 1,
+                        "userSettings": {
+                            "callCheckouts": false,
+                            "callScores": false,
+                            "caller": null,
+                            "callerEmotion": "floor",
+                            "callerLanguage": "english",
+                            "callerVolume": 100,
+                            "countEachThrow": true,
+                            "language": "en",
+                            "showAnimations": true,
+                            "showChalkboard": true,
+                            "showCheckoutGuide": true,
+                            "showDiscordProfile": true,
+                            "showSeasonalEffects": true,
+                            "showViewers": true
+                        }
+                    },
+                    "userId": "a38b3a08-002a-4551-9ff9-xxx"
+                }
+            ],
+            "round": 2,
+            "scores": [
+                {
+                    "legs": 0,
+                    "sets": 0
+                },
+                {
+                    "legs": 1,
+                    "sets": 0
+                }
+            ],
+            "set": 1,
+            "settings": {
+                "baseScore": 121,
+                "bullMode": "25/50",
+                "inMode": "Straight",
+                "maxRounds": 50,
+                "outMode": "Straight"
+            },
+            "state": {
+                "checkoutGuide": null
+            },
+            "stats": [
+                {
+                    "legStats": {
+                        "average": 54,
+                        "averageUntil170": 0,
+                        "checkoutPercent": 0,
+                        "checkoutPoints": 0,
+                        "checkoutPointsAverage": 0,
+                        "checkouts": 0,
+                        "checkoutsHit": 0,
+                        "dartsThrown": 6,
+                        "dartsUntil170": 0,
+                        "first9Average": 54,
+                        "first9Score": 108,
+                        "gameId": "00000000-0000-0000-0000-000000000000",
+                        "less60": 1,
+                        "playerId": "00000000-0000-0000-0000-000000000000",
+                        "plus100": 0,
+                        "plus140": 0,
+                        "plus170": 0,
+                        "plus60": 1,
+                        "score": 108,
+                        "scoreUntil170": 0,
+                        "total180": 0
+                    },
+                    "matchStats": {
+                        "average": 54,
+                        "averageUntil170": 0,
+                        "checkoutPercent": 0,
+                        "checkoutPoints": 0,
+                        "checkoutPointsAverage": 0,
+                        "checkouts": 0,
+                        "checkoutsHit": 0,
+                        "dartsThrown": 6,
+                        "dartsUntil170": 0,
+                        "first9Average": 54,
+                        "first9Score": 108,
+                        "gameId": "00000000-0000-0000-0000-000000000000",
+                        "less60": 1,
+                        "playerId": "00000000-0000-0000-0000-000000000000",
+                        "plus100": 0,
+                        "plus140": 0,
+                        "plus170": 0,
+                        "plus60": 1,
+                        "score": 108,
+                        "scoreUntil170": 0,
+                        "total180": 0
+                    },
+                    "setStats": null
+                },
+                {
+                    "legStats": {
+                        "average": 72.6,
+                        "averageUntil170": 0,
+                        "checkoutPercent": 0.5,
+                        "checkoutPoints": 21,
+                        "checkoutPointsAverage": 0,
+                        "checkouts": 2,
+                        "checkoutsHit": 1,
+                        "dartsThrown": 5,
+                        "dartsUntil170": 0,
+                        "first9Average": 72.6,
+                        "first9Score": 121,
+                        "gameId": "00000000-0000-0000-0000-000000000000",
+                        "less60": 1,
+                        "playerId": "00000000-0000-0000-0000-000000000000",
+                        "plus100": 1,
+                        "plus140": 0,
+                        "plus170": 0,
+                        "plus60": 0,
+                        "score": 121,
+                        "scoreUntil170": 0,
+                        "total180": 0
+                    },
+                    "matchStats": {
+                        "average": 72.6,
+                        "averageUntil170": 0,
+                        "checkoutPercent": 0.5,
+                        "checkoutPoints": 21,
+                        "checkoutPointsAverage": 0,
+                        "checkouts": 2,
+                        "checkoutsHit": 1,
+                        "dartsThrown": 5,
+                        "dartsUntil170": 0,
+                        "first9Average": 72.6,
+                        "first9Score": 121,
+                        "gameId": "00000000-0000-0000-0000-000000000000",
+                        "less60": 1,
+                        "playerId": "00000000-0000-0000-0000-000000000000",
+                        "plus100": 1,
+                        "plus140": 0,
+                        "plus170": 0,
+                        "plus60": 0,
+                        "score": 121,
+                        "scoreUntil170": 0,
+                        "total180": 0
+                    },
+                    "setStats": null
+                }
+            ],
+            "turnBusted": false,
+            "turnScore": 21,
+            "turns": [
+                {
+                    "busted": false,
+                    "createdAt": "2025-11-20T07:31:53.354646817Z",
+                    "finishedAt": "2025-11-20T07:32:08.456853502Z",
+                    "id": "019aa02d-478a-79dd-b4ba-xxx",
+                    "marks": null,
+                    "playerId": "019aa02b-02be-7156-994f-xxx",
+                    "points": 21,
+                    "round": 2,
+                    "score": 0,
+                    "throws": [
+                        {
+                            "coords": {
+                                "x": -0.1256126595432232,
+                                "y": 0.89152647025274834
+                            },
+                            "createdAt": "2025-11-20T07:32:08.456317718Z",
+                            "detection": {
+                                "CalibrationID": "019aa02b-9f23-71cd-8e24-xxx",
+                                "ClientVersion": "0.26.15",
+                                "ConfigID": "019a5fbb-aa40-7a09-9164-xxx",
+                                "DistortionID": null,
+                                "ID": "00000000-0000-0000-0000-000000000000"
+                            },
+                            "entry": "detected",
+                            "id": "019aa02d-552a-7450-8dd9-xxx",
+                            "marks": null,
+                            "segment": {
+                                "bed": "SingleOuter",
+                                "multiplier": 1,
+                                "name": "S20",
+                                "number": 20
+                            },
+                            "throw": 0
+                        },
+                        {
+                            "coords": {
+                                "x": 0.23864869472714267,
+                                "y": 0.74509535671630145
+                            },
+                            "corrected": {
+                                "coords": {
+                                    "x": 0.030650236516769836,
+                                    "y": 0.99594215053776758
+                                },
+                                "createdAt": "2025-11-20T07:31:59.928525Z",
+                                "entry": "detected",
+                                "id": "00000000-0000-0000-0000-000000000000",
+                                "segment": {
+                                    "bed": "Double",
+                                    "multiplier": 2,
+                                    "name": "D20",
+                                    "number": 20
+                                }
+                            },
+                            "createdAt": "2025-11-20T07:32:08.456848855Z",
+                            "detection": {
+                                "CalibrationID": "019aa02b-9f23-71cd-8e24-xxx",
+                                "ClientVersion": "0.26.15",
+                                "ConfigID": "019a5fbb-aa40-7a09-9164-xxx",
+                                "DistortionID": null,
+                                "ID": "00000000-0000-0000-0000-000000000000"
+                            },
+                            "entry": "corrected",
+                            "id": "019aa02d-6137-7d1c-a428-xxx",
+                            "marks": null,
+                            "segment": {
+                                "bed": "SingleOuter",
+                                "multiplier": 1,
+                                "name": "S1",
+                                "number": 1
+                            },
+                            "throw": 1
+                        }
+                    ],
+                    "turn": 3
+                }
+            ],
+            "type": "Local",
+            "variant": "X01",
+            "winner": 0
+        }
+    }
+}
+```
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request or create an issue if you have ideas for improvements or have found a bug.

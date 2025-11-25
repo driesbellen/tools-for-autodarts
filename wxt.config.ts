@@ -30,7 +30,7 @@ export default defineConfig({
       "*://autodarts.x10.mx/*",
       "*://adt-socket.tobias-thiele.de/*",
       "*://adt-proxy.tobias-thiele.de/*",
-      "*://discord.com/api/webhooks/*",
+      "*://discord.com/api/webhooks/*",      
     ],
     permissions: [
       "storage",

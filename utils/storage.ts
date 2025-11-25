@@ -123,6 +123,15 @@ export interface IConfig {
     enabled: boolean;
     sounds: ISound[];
   };
+  webhooks: {
+    enabled: boolean;
+    url: string;
+    token: string;
+    payloadTypes: {
+      match: boolean;
+      throws: boolean;
+    };
+  };
   zoom: {
     enabled: boolean;
     position: "bottom-right" | "bottom-left" | "center";
@@ -317,7 +326,7 @@ export interface IWled {
 export type TBoardStatus = BoardStatus | undefined;
 
 export const defaultConfig: IConfig = {
-  version: 18,
+  version: 19,
   discord: {
     enabled: false,
     manually: false,
@@ -653,6 +662,15 @@ export const defaultConfig: IConfig = {
         triggers: [ "cricket_hit" ],
       },
     ],
+  },
+  webhooks: {
+    enabled: false,
+    url: "",
+    token: "",
+    payloadTypes: {
+      match: false,
+      throws: false,
+    },
   },
   wledFx: {
     enabled: false,
