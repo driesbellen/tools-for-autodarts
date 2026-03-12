@@ -356,6 +356,9 @@ function startDelayedPlayback() {
   buffer.forEach(b => b.close());
   buffer = [];
 
+  // Locked once output begins; null means still filling the initial buffer
+  let lockedBufferSize: number | null = null;
+
   // Function to capture frames and create the delay
   const captureFrame = async () => {
     if (!sourceVideo || !ctx || !sourceCanvas) {
@@ -381,12 +384,18 @@ function startDelayedPlayback() {
       // Add the frame to our buffer
       buffer.push(bitmap);
 
-      // Recalculate target buffer size each frame so changes in detectedFPS
-      // (updated by detectFPS() during the first ~2 s) are reflected correctly
+      // Compute the current target but lock it once output begins.
+      // This prevents a mid-stream FPS change from causing a canvas freeze
+      // (target grows → buffer never reaches it) or a stale long delay
+      // (target shrinks → oversized buffer never drained).
       const targetBufferSize = delaySeconds.value * detectedFPS.value;
+      if (lockedBufferSize === null && buffer.length >= targetBufferSize) {
+        lockedBufferSize = targetBufferSize;
+      }
+      const effectiveBufferSize = lockedBufferSize ?? targetBufferSize;
 
       // If buffer is full, start showing the delayed frames
-      if (buffer.length >= targetBufferSize) {
+      if (buffer.length >= effectiveBufferSize) {
         // Get the oldest frame
         const delayedFrame = buffer.shift();
 
