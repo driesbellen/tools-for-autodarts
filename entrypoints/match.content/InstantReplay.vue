@@ -352,14 +352,9 @@ function startDelayedPlayback() {
     return;
   }
 
-  // Calculate frame buffer size based on delay using detected FPS
-  const bufferSize = delaySeconds.value * detectedFPS.value;
   // Reset buffer from any previous playback
   buffer.forEach(b => b.close());
   buffer = [];
-  let shouldOutput = false;
-
-  console.log(`Starting delayed playback with buffer size: ${bufferSize} (${detectedFPS.value} FPS)`);
 
   // Function to capture frames and create the delay
   const captureFrame = async () => {
@@ -386,10 +381,12 @@ function startDelayedPlayback() {
       // Add the frame to our buffer
       buffer.push(bitmap);
 
-      // If buffer is full, start showing the delayed frames
-      if (buffer.length >= bufferSize) {
-        shouldOutput = true;
+      // Recalculate target buffer size each frame so changes in detectedFPS
+      // (updated by detectFPS() during the first ~2 s) are reflected correctly
+      const targetBufferSize = delaySeconds.value * detectedFPS.value;
 
+      // If buffer is full, start showing the delayed frames
+      if (buffer.length >= targetBufferSize) {
         // Get the oldest frame
         const delayedFrame = buffer.shift();
 

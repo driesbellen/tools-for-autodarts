@@ -2,7 +2,7 @@
   <div
     @click="hideAnimation"
     v-if="isShowingAnimation"
-    class="fixed z-[200]"
+    class="fixed z-[150]"
     :class="animationContainerClasses"
     :style="animationContainerStyle"
   >
