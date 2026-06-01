@@ -24,6 +24,13 @@ let lastGameshotTimestamp: number = 0;
 const GAMESHOT_COOLDOWN_MS = 10000; // 10 seconds cooldown
 // Track Bull-off sound trigger so it only plays once per Bull-off/match
 let lastBullOffTriggerKey: string | null = null;
+let lastBullOffTimestamp: number = 0;
+const BULLOFF_SOUND_COOLDOWN_MS = 5000;
+// Poll the match UI as a fallback because Bull-off can be started as a sub-game from X01.
+let bullOffDomPoller: number | null = null;
+// Also listen for clicks/touches on Bull-off buttons; this is the most reliable fallback
+// when Autodarts keeps the outer match as X01 and does not expose Bull-off in match data.
+let bullOffClickWatcherActive = false;
 // Flag to track if we've shown the interaction notification
 let interactionNotificationShown = false;
 // Reference to notification element
@@ -68,6 +75,10 @@ export async function caller() {
 
     // Initialize audio player for Safari compatibility
     initAudioPlayer();
+
+    // Fallback watchers: catch Bull-off when Autodarts keeps the main match variant as X01.
+    startBullOffDomWatcher();
+    startBullOffClickWatcher();
 
     if (!gameDataWatcherUnwatch) {
       gameDataWatcherUnwatch = AutodartsToolsGameData.watch((gameData: IGameData, oldGameData: IGameData) => {
@@ -122,11 +133,16 @@ export function callerOnRemove() {
     debounceTimer = null;
   }
 
+  // Stop Bull-off fallback watchers
+  stopBullOffDomWatcher();
+  stopBullOffClickWatcher();
+
   // Reset gameshot cooldown timestamp
   lastGameshotTimestamp = 0;
 
   // Reset Bull-off trigger tracking
   lastBullOffTriggerKey = null;
+  lastBullOffTimestamp = 0;
 
   // Cancel any ongoing TTS
   if (window.speechSynthesis) {
@@ -398,6 +414,141 @@ function isSoundInQueue(trigger: string): boolean {
   );
 }
 
+
+function normalizeBullOffText(value: unknown): string {
+  return String(value ?? "").toLowerCase().replace(/[\s_-]+/g, "");
+}
+
+function textContainsBullOff(value: unknown): boolean {
+  const text = String(value ?? "").toLowerCase();
+  return text.includes("bull-off") || text.includes("bull off") || text.includes("bulloff");
+}
+
+function isBullOffVisibleInDom(): boolean {
+  const text = document.body?.innerText ?? "";
+  return textContainsBullOff(text);
+}
+
+function isBullOffActive(gameData?: IGameData): boolean {
+  const match: any = gameData?.match;
+  if (!match) return isBullOffVisibleInDom();
+
+  const directValues = [
+    match.variant,
+    match.type,
+    match.settings?.mode,
+    match.settings?.gameMode,
+    match.settings?.variant,
+    match.state?.variant,
+    match.state?.type,
+    match.state?.mode,
+    match.body?.variant,
+    match.body?.type,
+  ];
+
+  if (directValues.some(value => normalizeBullOffText(value) === "bulloff")) return true;
+
+  // Fallback: some Autodarts Bull-off states are nested in state/body while the outer match stays X01.
+  const stateText = JSON.stringify(match.state ?? {}).toLowerCase();
+  const bodyText = JSON.stringify(match.body ?? {}).toLowerCase();
+  if (textContainsBullOff(stateText) || textContainsBullOff(bodyText)) return true;
+
+  // Last fallback: detect the visible Bull-off UI.
+  return isBullOffVisibleInDom();
+}
+
+function getBullOffTriggerKey(gameData?: IGameData, source: string = "game-data"): string {
+  const match: any = gameData?.match;
+  const matchId = match?.id ?? window.location.href;
+  const round = match?.round ?? 0;
+  const player = match?.player ?? 0;
+  return `${source}:${matchId}:${round}:${player}`;
+}
+
+function triggerBullOffCallerSound(triggerKey: string): void {
+  const now = Date.now();
+
+  if (lastBullOffTriggerKey === triggerKey || now - lastBullOffTimestamp < BULLOFF_SOUND_COOLDOWN_MS) {
+    console.log("Autodarts Tools: Bull-off already handled recently, skipping duplicate bulloff sound");
+    return;
+  }
+
+  console.log("Autodarts Tools: Bull-off detected, playing caller trigger bulloff", triggerKey);
+  playSound("bulloff");
+  lastBullOffTriggerKey = triggerKey;
+  lastBullOffTimestamp = now;
+}
+
+function startBullOffDomWatcher(): void {
+  if (bullOffDomPoller !== null) return;
+
+  bullOffDomPoller = window.setInterval(() => {
+    if (!config?.caller?.enabled) return;
+
+    if (isBullOffVisibleInDom()) {
+      triggerBullOffCallerSound(getBullOffTriggerKey(undefined, "dom"));
+    }
+  }, 500);
+}
+
+function elementOrParentsContainBullOff(target: EventTarget | null): boolean {
+  let element = target instanceof HTMLElement ? target : null;
+  let depth = 0;
+
+  while (element && depth < 8) {
+    const textParts = [
+      element.innerText,
+      element.textContent,
+      element.getAttribute("aria-label"),
+      element.getAttribute("title"),
+      element.getAttribute("value"),
+      element.getAttribute("data-testid"),
+      element.className,
+    ];
+
+    if (textParts.some(textContainsBullOff)) return true;
+
+    element = element.parentElement;
+    depth += 1;
+  }
+
+  return false;
+}
+
+function handleBullOffClickOrTouch(event: Event): void {
+  if (!config?.caller?.enabled) return;
+  if (!elementOrParentsContainBullOff(event.target)) return;
+
+  console.log("Autodarts Tools: Bull-off button/link interaction detected");
+
+  // This runs during a real user interaction, so it also helps Chrome allow audio playback.
+  unlockAudio();
+  triggerBullOffCallerSound(getBullOffTriggerKey(undefined, event.type));
+}
+
+function startBullOffClickWatcher(): void {
+  if (bullOffClickWatcherActive) return;
+
+  document.addEventListener("click", handleBullOffClickOrTouch, true);
+  document.addEventListener("touchstart", handleBullOffClickOrTouch, true);
+  bullOffClickWatcherActive = true;
+}
+
+function stopBullOffClickWatcher(): void {
+  if (!bullOffClickWatcherActive) return;
+
+  document.removeEventListener("click", handleBullOffClickOrTouch, true);
+  document.removeEventListener("touchstart", handleBullOffClickOrTouch, true);
+  bullOffClickWatcherActive = false;
+}
+
+function stopBullOffDomWatcher(): void {
+  if (bullOffDomPoller !== null) {
+    clearInterval(bullOffDomPoller);
+    bullOffDomPoller = null;
+  }
+}
+
 /**
  * Process game data to trigger sounds based on game events
  */
@@ -412,17 +563,8 @@ async function processGameData(gameData: IGameData, oldGameData: IGameData, from
     return;
   }
 
-  if (gameData.match.variant === "Bull-off") {
-    const bullOffTriggerKey = gameData.match.id ?? "active-bulloff";
-
-    if (lastBullOffTriggerKey !== bullOffTriggerKey) {
-      console.log("Autodarts Tools: Bull-off detected, playing caller trigger bulloff");
-      playSound("bulloff");
-      lastBullOffTriggerKey = bullOffTriggerKey;
-    } else {
-      console.log("Autodarts Tools: Bull-off already handled, skipping duplicate bulloff sound");
-    }
-
+  if (isBullOffActive(gameData)) {
+    triggerBullOffCallerSound(getBullOffTriggerKey(gameData));
     return;
   }
 
@@ -951,6 +1093,16 @@ async function playNextSound(): Promise<void> {
   // If the queue is empty, we're done
   if (soundQueue.length === 0) {
     isPlaying = false;
+    return;
+  }
+
+  // Browser autoplay rules can block the first sound on a newly opened match page.
+  // Keep the sound in the queue until the user clicks/taps/presses a key, instead of
+  // shifting it from the queue and losing it when audio playback is rejected.
+  if (!audioUnlocked) {
+    console.log("Autodarts Tools: Audio not unlocked yet, keeping sound in queue");
+    isPlaying = false;
+    showInteractionNotification();
     return;
   }
 
