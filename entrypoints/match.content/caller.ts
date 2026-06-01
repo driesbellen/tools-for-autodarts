@@ -21,6 +21,8 @@ const DEBOUNCE_DELAY = 200;
 // Cooldown tracking for gameshot/matchshot sounds (to prevent multiple triggers from AI referee)
 let lastGameshotTimestamp: number = 0;
 const GAMESHOT_COOLDOWN_MS = 10000; // 10 seconds cooldown
+// Track Bull-off sound trigger so it only plays once per Bull-off/match
+let lastBullOffTriggerKey: string | null = null;
 // Flag to track if we've shown the interaction notification
 let interactionNotificationShown = false;
 // Reference to notification element
@@ -121,6 +123,8 @@ export function callerOnRemove() {
 
   // Reset gameshot cooldown timestamp
   lastGameshotTimestamp = 0;
+  // Reset Bull-off trigger tracking
+lastBullOffTriggerKey = null;
 
   // Cancel any ongoing TTS
   if (window.speechSynthesis) {
@@ -397,7 +401,7 @@ function isSoundInQueue(trigger: string): boolean {
  */
 let lastScore: number = 0;
 async function processGameData(gameData: IGameData, oldGameData: IGameData, fromWebSocket: boolean = false): Promise<void> {
-  if (!gameData.match || !gameData.match.turns?.length) return;
+  if (!gameData.match) return;
 
   const editMode: boolean = gameData.match.activated !== undefined && gameData.match.activated >= 0;
   if (editMode) {
@@ -406,7 +410,20 @@ async function processGameData(gameData: IGameData, oldGameData: IGameData, from
     return;
   }
 
-  if (gameData.match.variant === "Bull-off") return;
+  if (gameData.match.variant === "Bull-off") {
+  const bullOffTriggerKey = gameData.match.id ?? "active-bulloff";
+
+  if (lastBullOffTriggerKey !== bullOffTriggerKey) {
+    playSound("bulloff");
+    lastBullOffTriggerKey = bullOffTriggerKey;
+  }
+
+  return;
+}
+
+lastBullOffTriggerKey = null;
+
+if (!gameData.match.turns?.length) return;
 
   // This is for cricket to prevent playing the score when not changed since last round
   if (gameData.match.turns[0].throws.length === 0) {
