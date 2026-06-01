@@ -1,3 +1,4 @@
+import { AutodartsToolsBoardData, type IBoard } from "@/utils/board-data-storage";
 import { AutodartsToolsGameData, type IGameData } from "@/utils/game-data-storage";
 import { AutodartsToolsConfig, type IConfig, type ISoundTTS } from "@/utils/storage";
 import { getSoundFromIndexedDB, isIndexedDBAvailable, triggerPatterns } from "@/utils/helpers";
@@ -123,8 +124,9 @@ export function callerOnRemove() {
 
   // Reset gameshot cooldown timestamp
   lastGameshotTimestamp = 0;
+
   // Reset Bull-off trigger tracking
-lastBullOffTriggerKey = null;
+  lastBullOffTriggerKey = null;
 
   // Cancel any ongoing TTS
   if (window.speechSynthesis) {
@@ -331,7 +333,7 @@ function showInteractionNotification(): void {
           Please interact with the page (click, tap, or press a key) to enable audio for the caller.
         </div>
         <button class="adt-notification-close">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><!-- Icon from Pixelarticons by Gerrit Halfmann - https://github.com/halfmage/pixelarticons/blob/master/LICENSE --><path fill="currentColor" d="M5 5h2v2H5zm4 4H7V7h2zm2 2H9V9h2zm2 0h-2v2H9v2H7v2H5v2h2v-2h2v-2h2v-2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2zm2-2v2h-2V9zm2-2v2h-2V7zm0 0V5h2v2z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M5 5h2v2H5zm4 4H7V7h2zm2 2H9V9h2zm2 0h-2v2H9v2H7v2H5v2h2v-2h2v-2h2v-2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2zm2-2v2h-2V9zm2-2v2h-2V7zm0 0V5h2v2z"/></svg>
         </button>
       </div>
     `;
@@ -411,19 +413,22 @@ async function processGameData(gameData: IGameData, oldGameData: IGameData, from
   }
 
   if (gameData.match.variant === "Bull-off") {
-  const bullOffTriggerKey = gameData.match.id ?? "active-bulloff";
+    const bullOffTriggerKey = gameData.match.id ?? "active-bulloff";
 
-  if (lastBullOffTriggerKey !== bullOffTriggerKey) {
-    playSound("bulloff");
-    lastBullOffTriggerKey = bullOffTriggerKey;
+    if (lastBullOffTriggerKey !== bullOffTriggerKey) {
+      console.log("Autodarts Tools: Bull-off detected, playing caller trigger bulloff");
+      playSound("bulloff");
+      lastBullOffTriggerKey = bullOffTriggerKey;
+    } else {
+      console.log("Autodarts Tools: Bull-off already handled, skipping duplicate bulloff sound");
+    }
+
+    return;
   }
 
-  return;
-}
+  lastBullOffTriggerKey = null;
 
-lastBullOffTriggerKey = null;
-
-if (!gameData.match.turns?.length) return;
+  if (!gameData.match.turns?.length) return;
 
   // This is for cricket to prevent playing the score when not changed since last round
   if (gameData.match.turns[0].throws.length === 0) {
