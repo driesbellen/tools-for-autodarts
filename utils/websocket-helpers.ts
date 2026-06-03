@@ -218,10 +218,29 @@ export async function processWebSocketMessage(channel: string, data: ILobbies | 
       if (data.body) return;
 
       const id = window.location.href.match(/matches\/([0-9a-f-]+)/)?.[1];
-      const playersBoard = data.players?.find(player => player.boardId === window.location.href.match(/boards\/([0-9a-f-]+)/)?.[1]);
-      if ((id !== data.id && !playersBoard) && (data as IMatch).activated === undefined) return;
+      const boardId = window.location.href.match(/boards\/([0-9a-f-]+)/)?.[1];
+
+      const playersBoard = data.players?.find(player => player.boardId === boardId);
 
       const gameData = await AutodartsToolsGameData.getValue();
+
+      const isBullOff = (data as IMatch).variant === "Bull-off";
+      const currentPlayers = gameData.match?.players ?? [];
+      const incomingPlayers = (data as IMatch).players ?? [];
+
+      const isRelatedBullOff = isBullOff && currentPlayers.some(currentPlayer =>
+      incomingPlayers.some(incomingPlayer =>
+       (!!currentPlayer.id && currentPlayer.id === incomingPlayer.id)
+    || (!!currentPlayer.userId && currentPlayer.userId === incomingPlayer.userId)
+    || (!!currentPlayer.boardId && currentPlayer.boardId === incomingPlayer.boardId),
+  ),
+);
+
+if (isRelatedBullOff) {
+  console.log("Autodarts Tools: Related Bull-off accepted for current match", (data as IMatch).id);
+}
+
+if ((id !== data.id && !playersBoard && !isRelatedBullOff) && (data as IMatch).activated === undefined) return;
       if ((data as IMatch).activated !== undefined) {
         // Merge activated state with existing match data
         AutodartsToolsGameData.setValue({
