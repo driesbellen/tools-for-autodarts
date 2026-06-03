@@ -24,6 +24,13 @@ let lastGameshotTimestamp: number = 0;
 const GAMESHOT_COOLDOWN_MS = 10000; // 10 seconds cooldown
 // Track Bull-off sound trigger so it only plays once per Bull-off/match
 let lastBullOffTriggerKey: string | null = null;
+let lastBullOffTimestamp: number = 0;
+let bullOffSoundPlayedForCurrentStart = false;
+// Keep the Bull-off caller locked for the current match/page. This prevents duplicate
+// playback from websocket updates, player switches, or multiple content-script instances.
+const BULLOFF_SOUND_COOLDOWN_MS = 60 * 60 * 1000;
+const BULLOFF_STORAGE_LOCK_MS = 60 * 60 * 1000;
+const BULLOFF_START_STORAGE_KEY = "adt-tools-caller-bulloff-v6-matchdata-only";
 // Flag to track if we've shown the interaction notification
 let interactionNotificationShown = false;
 // Reference to notification element
@@ -59,7 +66,7 @@ function checkBoardStatus(boardData: IBoard): void {
 }
 
 export async function caller() {
-  console.log("Autodarts Tools: caller");
+  console.log("Autodarts Tools: caller BULLOFF_V6_MATCHDATA_ONLY_NO_DOM");
 
   try {
     config = await AutodartsToolsConfig.getValue();
@@ -68,6 +75,10 @@ export async function caller() {
 
     // Initialize audio player for Safari compatibility
     initAudioPlayer();
+
+    // Bull-off is handled only through game data.
+    // The previous click fallback could also fire on the Start Bull-off action,
+    // causing the same caller sound to be queued twice.
 
     if (!gameDataWatcherUnwatch) {
       gameDataWatcherUnwatch = AutodartsToolsGameData.watch((gameData: IGameData, oldGameData: IGameData) => {
@@ -122,11 +133,17 @@ export function callerOnRemove() {
     debounceTimer = null;
   }
 
+  // Bull-off is locked per match in sessionStorage.
+
   // Reset gameshot cooldown timestamp
   lastGameshotTimestamp = 0;
 
-  // Reset Bull-off trigger tracking
+  // Reset in-memory Bull-off trigger tracking. Do not clear the session lock here:
+  // Autodarts can re-initialize the caller while Bull-off is starting or switching players.
+  // Clearing the lock here would allow the same Bull-off start to trigger again.
   lastBullOffTriggerKey = null;
+  lastBullOffTimestamp = 0;
+  bullOffSoundPlayedForCurrentStart = false;
 
   // Cancel any ongoing TTS
   if (window.speechSynthesis) {
@@ -398,6 +415,104 @@ function isSoundInQueue(trigger: string): boolean {
   );
 }
 
+
+function normalizeBullOffText(value: unknown): string {
+  return String(value ?? "").toLowerCase().replace(/[\s_-]+/g, "");
+}
+
+function textContainsBullOff(value: unknown): boolean {
+  const text = String(value ?? "").toLowerCase();
+  return text.includes("bull-off") || text.includes("bull off") || text.includes("bulloff");
+}
+
+function isBullOffActiveInGameData(gameData?: IGameData): boolean {
+  const match: any = gameData?.match;
+  if (!match) return false;
+
+  const directValues = [
+    match.variant,
+    match.type,
+    match.settings?.mode,
+    match.settings?.gameMode,
+    match.settings?.variant,
+    match.state?.variant,
+    match.state?.type,
+    match.state?.mode,
+    match.body?.variant,
+    match.body?.type,
+  ];
+
+  if (directValues.some(value => normalizeBullOffText(value) === "bulloff")) return true;
+
+  // Fallback: some Autodarts Bull-off states are nested in state/body while the outer match stays X01.
+  const stateText = JSON.stringify(match.state ?? {}).toLowerCase();
+  const bodyText = JSON.stringify(match.body ?? {}).toLowerCase();
+  return textContainsBullOff(stateText) || textContainsBullOff(bodyText);
+}
+
+function getBullOffTriggerKey(gameData?: IGameData): string {
+  const match: any = gameData?.match;
+
+  // Important: do not include round, player, turn, or throw data in this key.
+  // During Bull-off those values can change when the next player is selected,
+  // which would make the caller think a new Bull-off has started.
+  const matchIdFromUrl = window.location.href.match(/matches\/([0-9a-f-]+)/)?.[1];
+  const matchId = matchIdFromUrl ?? match?.id ?? window.location.pathname;
+
+  return `bulloff:${matchId}`;
+}
+type BullOffSessionLock = { key: string; timestamp: number };
+
+function getBullOffSessionLock(): BullOffSessionLock | null {
+  try {
+    const rawValue = window.sessionStorage.getItem(BULLOFF_START_STORAGE_KEY);
+    if (!rawValue) return null;
+
+    const parsedValue = JSON.parse(rawValue) as Partial<BullOffSessionLock>;
+    if (!parsedValue.key || !parsedValue.timestamp) return null;
+
+    return {
+      key: parsedValue.key,
+      timestamp: Number(parsedValue.timestamp),
+    };
+  } catch (error) {
+    console.warn("Autodarts Tools: Could not read Bull-off session lock", error);
+    return null;
+  }
+}
+
+function setBullOffSessionLock(triggerKey: string, timestamp: number): void {
+  try {
+    window.sessionStorage.setItem(BULLOFF_START_STORAGE_KEY, JSON.stringify({ key: triggerKey, timestamp }));
+  } catch (error) {
+    console.warn("Autodarts Tools: Could not write Bull-off session lock", error);
+  }
+}
+
+function triggerBullOffCallerSound(triggerKey: string): void {
+  const now = Date.now();
+  const sessionLock = getBullOffSessionLock();
+
+  // Stop duplicates from the same Bull-off start. This intentionally ignores
+  // source/round/player so websocket repeats and player switches cannot each
+  // play the sound.
+  if (
+    bullOffSoundPlayedForCurrentStart
+    || lastBullOffTriggerKey === triggerKey
+    || (sessionLock && sessionLock.key === triggerKey && now - sessionLock.timestamp < BULLOFF_STORAGE_LOCK_MS)
+    || now - lastBullOffTimestamp < 30000
+  ) {
+    return;
+  }
+
+  lastBullOffTriggerKey = triggerKey;
+  lastBullOffTimestamp = now;
+  bullOffSoundPlayedForCurrentStart = true;
+  setBullOffSessionLock(triggerKey, now);
+
+  console.log("Autodarts Tools: BULLOFF_V6_MATCHDATA_ONLY_NO_DOM playing caller trigger bulloff", triggerKey);
+  playSound("bulloff");
+}
 /**
  * Process game data to trigger sounds based on game events
  */
@@ -412,21 +527,17 @@ async function processGameData(gameData: IGameData, oldGameData: IGameData, from
     return;
   }
 
-  if (gameData.match.variant === "Bull-off") {
-    const bullOffTriggerKey = gameData.match.id ?? "active-bulloff";
+  const bullOffActiveInGameData = isBullOffActiveInGameData(gameData);
 
-    if (lastBullOffTriggerKey !== bullOffTriggerKey) {
-      console.log("Autodarts Tools: Bull-off detected, playing caller trigger bulloff");
-      playSound("bulloff");
-      lastBullOffTriggerKey = bullOffTriggerKey;
-    } else {
-      console.log("Autodarts Tools: Bull-off already handled, skipping duplicate bulloff sound");
-    }
-
+  if (bullOffActiveInGameData) {
+    // Always route Bull-off updates through the same match-level lock.
+    // The lock prevents duplicate playback on websocket repeats and player switches.
+    triggerBullOffCallerSound(getBullOffTriggerKey(gameData));
     return;
   }
 
-  lastBullOffTriggerKey = null;
+  // Do not reset the Bull-off lock here. During Bull-off, normal match/player updates can
+  // still arrive and would otherwise retrigger the start sound on player switches.
 
   if (!gameData.match.turns?.length) return;
 
@@ -695,6 +806,11 @@ async function processGameData(gameData: IGameData, oldGameData: IGameData, from
 function playSound(trigger: string): void {
   console.log("Autodarts Tools: Adding sound to queue", trigger);
 
+  if (trigger === "bulloff" && isSoundInQueue("bulloff")) {
+    console.log("Autodarts Tools: Bull-off sound is already queued, skipping duplicate");
+    return;
+  }
+
   if (!config?.caller?.sounds || !config.caller.sounds.length) {
     console.log("Autodarts Tools: No sounds configured");
     return;
@@ -951,6 +1067,16 @@ async function playNextSound(): Promise<void> {
   // If the queue is empty, we're done
   if (soundQueue.length === 0) {
     isPlaying = false;
+    return;
+  }
+
+  // Browser autoplay rules can block the first sound on a newly opened match page.
+  // Keep the sound in the queue until the user clicks/taps/presses a key, instead of
+  // shifting it from the queue and losing it when audio playback is rejected.
+  if (!audioUnlocked) {
+    console.log("Autodarts Tools: Audio not unlocked yet, keeping sound in queue");
+    isPlaying = false;
+    showInteractionNotification();
     return;
   }
 
