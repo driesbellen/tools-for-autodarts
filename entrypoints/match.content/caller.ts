@@ -30,13 +30,19 @@ let bullOffSoundPlayedForCurrentStart = false;
 // playback from websocket updates, player switches, or multiple content-script instances.
 const BULLOFF_SOUND_COOLDOWN_MS = 60 * 60 * 1000;
 const BULLOFF_STORAGE_LOCK_MS = 60 * 60 * 1000;
-const BULLOFF_START_STORAGE_KEY = "adt-tools-caller-bulloff-v6-matchdata-only";
+const BULLOFF_START_STORAGE_KEY = "adt-tools-caller-bulloff";
 // Flag to track if we've shown the interaction notification
 let interactionNotificationShown = false;
 // Reference to notification element
 let notificationElement: HTMLElement | null = null;
 // Reference to the style element for notification
 let notificationStyleElement: HTMLStyleElement | null = null;
+
+// Bull-off center-screen popup state
+let bullOffPopupElement: HTMLElement | null = null;
+let bullOffPopupStyleElement: HTMLStyleElement | null = null;
+let bullOffPopupTimer: number | null = null;
+const BULLOFF_POPUP_DURATION_MS = 3500;
 
 // Audio element pool for Safari compatibility
 const AUDIO_POOL_SIZE = 3;
@@ -66,7 +72,7 @@ function checkBoardStatus(boardData: IBoard): void {
 }
 
 export async function caller() {
-  console.log("Autodarts Tools: caller BULLOFF_V6_MATCHDATA_ONLY_NO_DOM");
+  console.log("Autodarts Tools: caller");
 
   try {
     config = await AutodartsToolsConfig.getValue();
@@ -177,6 +183,9 @@ export function callerOnRemove() {
 
   // Remove notification elements if they exist
   removeInteractionNotification();
+
+  // Remove Bull-off popup if it is currently visible
+  removeBullOffPopup();
 }
 
 /**
@@ -398,6 +407,102 @@ function removeInteractionNotification(): void {
   interactionNotificationShown = false;
 }
 
+function showBullOffPopup(): void {
+  try {
+    removeBullOffPopup();
+
+    if (!document.querySelector("style[data-adt-bulloff-popup-style]")) {
+      bullOffPopupStyleElement = document.createElement("style");
+      bullOffPopupStyleElement.setAttribute("data-adt-bulloff-popup-style", "");
+      bullOffPopupStyleElement.textContent = `
+        .adt-bulloff-popup {
+          position: fixed;
+          inset: 0;
+          z-index: 2147483647;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .adt-bulloff-popup-text {
+          padding: 0.35em 0.75em;
+          border-radius: 0.22em;
+          color: #fff;
+          background: rgba(0, 0, 0, 0.72);
+          border: 0.06em solid rgba(255, 255, 255, 0.35);
+          box-shadow: 0 0.15em 1em rgba(0, 0, 0, 0.45), 0 0 1.5em rgba(255, 255, 255, 0.2);
+          font-size: clamp(3rem, 9vw, 8rem);
+          font-weight: 900;
+          letter-spacing: 0.05em;
+          line-height: 1;
+          text-transform: uppercase;
+          text-shadow: 0 0 0.18em rgba(255, 255, 255, 0.65), 0 0.05em 0.16em rgba(0, 0, 0, 0.85);
+          animation: adt-bulloff-popup-in 420ms ease-out both, adt-bulloff-popup-out 650ms ease-in 2850ms forwards;
+        }
+
+        @keyframes adt-bulloff-popup-in {
+          0% {
+            opacity: 0;
+            transform: scale(0.55) translateY(0.18em);
+            filter: blur(0.08em);
+          }
+          65% {
+            opacity: 1;
+            transform: scale(1.08) translateY(0);
+            filter: blur(0);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0);
+          }
+        }
+
+        @keyframes adt-bulloff-popup-out {
+          to {
+            opacity: 0;
+            transform: scale(1.16) translateY(-0.08em);
+            filter: blur(0.05em);
+          }
+        }
+      `;
+      document.head.appendChild(bullOffPopupStyleElement);
+    } else {
+      bullOffPopupStyleElement = document.querySelector("style[data-adt-bulloff-popup-style]");
+    }
+
+    bullOffPopupElement = document.createElement("div");
+    bullOffPopupElement.className = "adt-bulloff-popup";
+    bullOffPopupElement.setAttribute("role", "status");
+    bullOffPopupElement.setAttribute("aria-live", "polite");
+    bullOffPopupElement.innerHTML = `<div class="adt-bulloff-popup-text">Bull-Off</div>`;
+    document.body.appendChild(bullOffPopupElement);
+
+    bullOffPopupTimer = window.setTimeout(removeBullOffPopup, BULLOFF_POPUP_DURATION_MS);
+  } catch (error) {
+    console.warn("Autodarts Tools: Could not show Bull-off popup", error);
+  }
+}
+
+function removeBullOffPopup(): void {
+  if (bullOffPopupTimer) {
+    window.clearTimeout(bullOffPopupTimer);
+    bullOffPopupTimer = null;
+  }
+
+  if (bullOffPopupElement) {
+    bullOffPopupElement.remove();
+    bullOffPopupElement = null;
+  }
+
+  if (bullOffPopupStyleElement && !document.querySelector(".adt-bulloff-popup")) {
+    bullOffPopupStyleElement.remove();
+    bullOffPopupStyleElement = null;
+  }
+}
+
 // Helper function to check if a sound trigger is already in queue
 function isSoundInQueue(trigger: string): boolean {
   // Find all sounds that match the trigger from config
@@ -510,7 +615,8 @@ function triggerBullOffCallerSound(triggerKey: string): void {
   bullOffSoundPlayedForCurrentStart = true;
   setBullOffSessionLock(triggerKey, now);
 
-  console.log("Autodarts Tools: BULLOFF_V6_MATCHDATA_ONLY_NO_DOM playing caller trigger bulloff", triggerKey);
+  console.log("Autodarts Tools: Bull-off detected, playing caller trigger bulloff and showing popup", triggerKey);
+  showBullOffPopup();
   playSound("bulloff");
 }
 /**
